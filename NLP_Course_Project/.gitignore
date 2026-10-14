@@ -1,0 +1,23 @@
+# .gitignore
+
+# Ignore Virtual Environments
+.venv/
+venv/
+ENV/
+
+# Ignore Python Bytecode and Caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Ignore Zip Archives & Generated Artifacts
+*.zip
+*.tar.gz
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Environment Secrets
+.env
