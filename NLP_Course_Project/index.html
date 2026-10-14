@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATS Resume Screener</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .active-tab {
+            border-bottom: 2px solid #3b82f6;
+            color: #1d4ed8;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
+
+    <div class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        
+        <!-- Header -->
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-slate-900 flex items-center gap-2">
+                📄 Resume Screening & ATS Optimization Tool
+            </h1>
+            <p class="text-slate-600 mt-2">
+                Optimize your resume match score using Semantic NLP Embeddings & Skill Extraction.
+            </p>
+        </header>
+
+        <!-- Main Form Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            
+            <!-- Column 1: Job Description -->
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h2 class="text-xl font-semibold mb-4 text-slate-800">1. Job Description</h2>
+                <label for="jdInput" class="block text-sm font-medium text-slate-700 mb-2">Paste the Job Description here:</label>
+                <textarea id="jdInput" rows="10" 
+                    class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
+                    placeholder="Paste full job description including requirements and responsibilities..."></textarea>
+            </div>
+
+            <!-- Column 2: Candidate Resume -->
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h2 class="text-xl font-semibold mb-4 text-slate-800">2. Candidate Resume</h2>
+                
+                <!-- Input Method Tabs -->
+                <div class="flex border-b border-slate-200 mb-4">
+                    <button id="tabPdf" onclick="switchUploadMethod('pdf')" 
+                        class="px-4 py-2 text-sm text-slate-600 hover:text-slate-900 active-tab">
+                        PDF File
+                    </button>
+                    <button id="tabText" onclick="switchUploadMethod('text')" 
+                        class="px-4 py-2 text-sm text-slate-600 hover:text-slate-900">
+                        Paste Text
+                    </button>
+                </div>
+
+                <!-- Option A: PDF Upload -->
+                <div id="pdfUploadContainer" class="block">
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Upload Resume PDF:</label>
+                    <div class="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-blue-500 transition cursor-pointer" onclick="document.getElementById('pdfInput').click()">
+                        <svg class="mx-auto h-10 w-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 0115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        </svg>
+                        <p class="mt-2 text-sm text-slate-600">Click to select or drop a PDF file here</p>
+                        <span id="fileName" class="inline-block mt-2 text-xs font-semibold text-blue-600"></span>
+                        <input id="pdfInput" type="file" accept="application/pdf" class="hidden" onchange="handleFileSelect(event)">
+                    </div>
+                </div>
+
+                <!-- Option B: Text Paste -->
+                <div id="textUploadContainer" class="hidden">
+                    <label for="resumeInput" class="block text-sm font-medium text-slate-700 mb-2">Paste Resume Text here:</label>
+                    <textarea id="resumeInput" rows="8" 
+                        class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-sm"
+                        placeholder="Paste resume contents here..."></textarea>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Action Button -->
+        <div class="mb-8">
+            <button onclick="analyzeResume()" 
+                class="w-full md:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition flex items-center justify-center gap-2">
+                <span>🚀 Analyze & Match Score</span>
+            </button>
+        </div>
+
+        <!-- Feedback Alerts -->
+        <div id="alertBox" class="hidden mb-8 p-4 rounded-lg text-sm font-medium"></div>
+
+        <!-- Loading Spinner -->
+        <div id="loadingSpinner" class="hidden mb-8 p-6 bg-white rounded-xl border border-slate-200 text-center shadow-sm">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+            <p class="mt-3 text-slate-600 font-medium">Processing text and computing contextual similarity...</p>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsContainer" class="hidden space-y-6">
+            
+            <!-- Overall Score Card -->
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <span class="text-sm font-medium text-slate-500 uppercase tracking-wider">Overall Match Score</span>
+                <div id="overallScore" class="text-5xl font-extrabold text-blue-600 mt-2">0%</div>
+            </div>
+
+            <!-- Detailed Score Breakdown -->
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h3 class="text-lg font-semibold text-slate-800 mb-4">Detailed Breakdown</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                        <span class="text-xs font-semibold text-slate-500 uppercase">Semantic Match</span>
+                        <div id="semanticScore" class="text-2xl font-bold text-slate-800 mt-1">0%</div>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                        <span class="text-xs font-semibold text-slate-500 uppercase">Skill Match</span>
+                        <div id="skillScore" class="text-2xl font-bold text-slate-800 mt-1">0%</div>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                        <span class="text-xs font-semibold text-slate-500 uppercase">Experience Match</span>
+                        <div id="experienceScore" class="text-2xl font-bold text-slate-800 mt-1">0%</div>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                        <span class="text-xs font-semibold text-slate-500 uppercase">Education Match</span>
+                        <div id="educationScore" class="text-2xl font-bold text-slate-800 mt-1">0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skill Insights -->
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h3 class="text-lg font-semibold text-slate-800 mb-4">Skill Insights</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="p-4 bg-emerald-50 rounded-lg border border-emerald-100">
+                        <h4 class="text-sm font-bold text-emerald-800 flex items-center gap-1 mb-2">
+                            ✅ Matched Skills
+                        </h4>
+                        <p id="matchedSkills" class="text-sm text-emerald-900 leading-relaxed">None detected</p>
+                    </div>
+                    <div class="p-4 bg-rose-50 rounded-lg border border-rose-100">
+                        <h4 class="text-sm font-bold text-rose-800 flex items-center gap-1 mb-2">
+                            ❌ Missing Skills
+                        </h4>
+                        <p id="missingSkills" class="text-sm text-rose-900 leading-relaxed">None detected</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recommendations -->
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h3 class="text-lg font-semibold text-slate-800 mb-4">💡 Recommendations to Improve ATS Score</h3>
+                <div id="recommendationsList" class="space-y-3"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Set API Endpoint (Default local FastAPI server)
+        const API_URL = "http://127.0.0.1:8000/api/v1";
+        let activeMethod = 'pdf';
+
+        function switchUploadMethod(method) {
+            activeMethod = method;
+            const pdfContainer = document.getElementById('pdfUploadContainer');
+            const textContainer = document.getElementById('textUploadContainer');
+            const tabPdf = document.getElementById('tabPdf');
+            const tabText = document.getElementById('tabText');
+
+            if (method === 'pdf') {
+                pdfContainer.classList.remove('hidden');
+                textContainer.classList.add('hidden');
+                tabPdf.classList.add('active-tab');
+                tabText.classList.remove('active-tab');
+            } else {
+                pdfContainer.classList.add('hidden');
+                textContainer.classList.remove('hidden');
+                tabText.classList.add('active-tab');
+                tabPdf.classList.remove('active-tab');
+            }
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                document.getElementById('fileName').textContent = `Selected: ${file.name}`;
+            }
+        }
+
+        function showAlert(message, type = 'error') {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.classList.remove('hidden', 'bg-rose-100', 'text-rose-800', 'bg-emerald-100', 'text-emerald-800');
+            
+            if (type === 'error') {
+                alertBox.classList.add('bg-rose-100', 'text-rose-800');
+            } else {
+                alertBox.classList.add('bg-emerald-100', 'text-emerald-800');
+            }
+            alertBox.textContent = message;
+        }
+
+        function hideAlert() {
+            document.getElementById('alertBox').classList.add('hidden');
+        }
+
+        async function analyzeResume() {
+            hideAlert();
+            const jdInput = document.getElementById('jdInput').value.trim();
+            const pdfInput = document.getElementById('pdfInput');
+            const resumeInput = document.getElementById('resumeInput').value.trim();
+
+            if (!jdInput) {
+                showAlert("Please provide a Job Description.");
+                return;
+            }
+
+            if (activeMethod === 'pdf' && (!pdfInput.files || pdfInput.files.length === 0)) {
+                showAlert("Please upload a PDF Resume.");
+                return;
+            }
+
+            if (activeMethod === 'text' && !resumeInput) {
+                showAlert("Please paste the Resume text.");
+                return;
+            }
+
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const resultsContainer = document.getElementById('resultsContainer');
+            
+            loadingSpinner.classList.remove('hidden');
+            resultsContainer.classList.add('hidden');
+
+            try {
+                let response;
+
+                if (activeMethod === 'pdf') {
+                    const formData = new FormData();
+                    formData.append("job_description", jdInput);
+                    formData.append("file", pdfInput.files[0]);
+
+                    response = await fetch(`${API_URL}/screen-file`, {
+                        method: "POST",
+                        body: formData
+                    });
+                } else {
+                    response = await fetch(`${API_URL}/screen`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            job_description: jdInput,
+                            resume_text: resumeInput
+                        })
+                    });
+                }
+
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({ detail: response.statusText }));
+                    throw new Error(errData.detail || `Server returned status ${response.status}`);
+                }
+
+                const result = await response.json();
+                renderResults(result);
+                showAlert("Analysis Complete!", "success");
+
+            } catch (error) {
+                showAlert(`Connection failed: Cannot reach FastAPI server at ${API_URL}. ${error.message}`);
+            } finally {
+                loadingSpinner.classList.add('hidden');
+            }
+        }
+
+        function renderResults(result) {
+            document.getElementById('resultsContainer').classList.remove('hidden');
+
+            // Overall Score
+            document.getElementById('overallScore').textContent = `${result.overall_score || 0}%`;
+
+            // Detailed Scores
+            const detailed = result.detailed_scores || {};
+            document.getElementById('semanticScore').textContent = `${detailed.semantic_score || 0}%`;
+            document.getElementById('skillScore').textContent = `${detailed.skill_score || 0}%`;
+            document.getElementById('experienceScore').textContent = `${detailed.experience_score || 0}%`;
+            document.getElementById('educationScore').textContent = `${detailed.education_score || 0}%`;
+
+            // Skills
+            const skills = result.skills || {};
+            const matched = skills.matched_skills || [];
+            const missing = skills.missing_skills || [];
+
+            document.getElementById('matchedSkills').textContent = matched.length > 0 ? matched.join(", ") : "None detected";
+            document.getElementById('missingSkills').textContent = missing.length > 0 ? missing.join(", ") : "None detected";
+
+            // Recommendations
+            const recsContainer = document.getElementById('recommendationsList');
+            recsContainer.innerHTML = "";
+            const recs = result.recommendations || [];
+
+            if (recs.length > 0) {
+                recs.forEach(rec => {
+                    const div = document.createElement('div');
+                    div.className = "p-3 bg-sky-50 text-sky-900 border border-sky-100 rounded-lg text-sm flex items-start gap-2";
+                    div.innerHTML = `<span>•</span> <span>${rec}</span>`;
+                    recsContainer.appendChild(div);
+                });
+            } else {
+                const div = document.createElement('div');
+                div.className = "p-3 bg-emerald-50 text-emerald-900 border border-emerald-100 rounded-lg text-sm";
+                div.textContent = "🎉 Strong alignment detected across skills and experience!";
+                recsContainer.appendChild(div);
+            }
+        }
+    </script>
+</body>
+</html>
